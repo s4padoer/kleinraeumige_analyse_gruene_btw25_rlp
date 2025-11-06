@@ -1,0 +1,3 @@
+# Kleinräumige Analyse des Stimmenanteils der Grünen in Rheinland-Pfalz bei den Bundestagswahlen
+
+Wahlergebnisse der letzten Bundestagswahl (BTW25) liegen zwar als .csv für die einzelnen Stimmbezirke in Rheinland-Pfalz vor, aber der genaue Zuschnitt der Wahlbezirke ist leider nicht bekannt. Daher soll der Wähleranteil (an Zweitstimmen) kleinteilig mithilfe von Zensusdaten (2022) im 1qkm Gitter geschätzt werden.
