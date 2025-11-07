@@ -1,14 +1,17 @@
-import requests
 import pandas as pd
 import geopandas as gpd
 import pystatis as pystat
 
+# Der Anfang ist analog zu data_editing_anteile.py
 
-# Ergebnisse fuer Landkreise bzw. Wahlkreise
+# Ergebnisse der BTW 2025 fuer Landkreise
 btw25_ergebnis_kreis = pd.read_csv("btw2025kreis.csv", header=4, delimiter=";")
+# Ergebnisse liegen nur absolut vor
 btw25_ergebnis_kreis["GRÜNE - Zweitstimmen_Anteil"] = btw25_ergebnis_kreis["GRÜNE - Zweitstimmen"] / btw25_ergebnis_kreis["Gültige - Zweitstimmen"]
 
+# Lade die Daten, die auf Ebene des 1-qkm-Grids vorliegen
 zensus_1km = gpd.read_file("Zensus2022_grid_final_6219414353666344919/Zensus2022_1kmGitter.shp")
+# Spaltennamen sind unguenstig, holen wir uns weiter unten besser verstaendlich
 zensus_1km.drop(['Einwohner', 'Durchschni', 'DurchschnH',
        'durchschnM', 'durchschnF', 'durchsch_1', 'Eigentueme', 'Leerstands',
        'MALeerstQu', 'Insgesamt_', 'Gas', 'Heizoel', 'Holz_Holzp',
@@ -25,6 +28,7 @@ zensus_1km_df = pd.read_csv("Zensus2022_grid_final_227080922168339922.csv", head
 #########################################################
 ################# Landkreise ############################
 #########################################################
+# Spaltennamen im zensus_1km_df:
 
 # Zensus 1km
 # Index(['OBJECTID', 'id', 'GITTER_ID_1km', 'Einwohner', 'Durchschnittsalter',
@@ -233,26 +237,19 @@ df = df.groupby(ars)["Fläche__qkm"].sum().to_frame()
 zensus_landkreise[ars] = zensus_landkreise[ars].astype(int)
 zensus_landkreise = zensus_landkreise.merge(df, on=[ars], how="left")
 zensus_landkreise["Einwohnerdichte"] = zensus_landkreise["Einwohner"] / zensus_landkreise["Fläche__qkm"]
+zensus_landkreise["Eigentümerquote"] = zensus_landkreise["Eigentümerquote"] / 100.0
+zensus_landkreise["Ausländeranteil"] = zensus_landkreise["Ausländeranteil"] / 100.0
+zensus_landkreise["Leerstandsquote"] = zensus_landkreise["Leerstandsquote"] / 100.0 
+zensus_1km_df["Eigentümerquote"] = zensus_1km_df["Eigentümerquote"] / 100.0
+zensus_1km_df["Ausländeranteil"] = zensus_1km_df["Ausländeranteil"] / 100.0
+zensus_1km_df["Leerstandsquote"] = zensus_1km_df["Leerstandsquote"] / 100.0
 zensus_1km_df["Einwohnerdichte"] = zensus_1km_df.Einwohner
 
-
-
-zensus_landkreise.to_csv("editing_ergebnis/Zensus2022_Landkreise_absolut.csv")
-zensus_landkreise = pd.read_csv("editing_ergebnis/Zensus2022_Landkreise_absolut.csv")
-
-
-# Weg wegen Multikollinearitaet:
-colinear = ['Personen unter 18 Jahren', 'keine Heizung', 'keine Energieträger', 'Gebäude vor 1919']
-
-cols_regression = {x for x in zensus_1km_df.columns.to_list()}
-cols_regression = cols_regression & {x for x in zensus_landkreise.columns.to_list()}
-cols_regression = cols_regression.difference(colinear)
-cols_regression = list(cols_regression)
 
 final_landkreise = zensus_landkreise.merge(btw25_ergebnis_kreis[["Statistische Kennziffer", "GRÜNE - Zweitstimmen", "GRÜNE - Zweitstimmen_Anteil"]],
                         left_on= ars, right_on="Statistische Kennziffer")
 
-
+final_landkreise.to_csv("editing_ergebnis/Zensus2022_Landkreise_absolut.csv")
 
 # Shapefile Landkreise (Zensus)
 zensus_landkreise_geo = gpd.read_file("K-2023-AI002-1-5--AI0201--2025-10-26/K-2023-AI002-1-5--AI0201--2025-10-26.shp")
@@ -275,9 +272,12 @@ zensus_1km_rlp.set_index("id", inplace=True)
 zensus_1km_df.set_index("id", inplace=True)
 zensus_1km_rlp = zensus_1km_rlp.merge(zensus_1km_df, on="id")
 
+zensus_landkreise_geo.rename({"GRÜNE - Zweitstimmen_Anteil": "GRUENE_Anteil"}, axis = 1, inplace = True)
+zensus_landkreise_geo.rename({"GRÜNE - Zweitstimmen": "GRUENE"}, axis = 1, inplace = True)
 
-zensus_landkreise_geo.to_file("editing_ergebnis/zensus_landkreise_absolut.shp")
-zensus_1km_rlp.to_file("editing_ergebnis/zensus_1km_rlp_absolut.shp")
+zensus_landkreise_geo.to_file("editing_ergebnis/zensus_landkreise_absolut.gpkg", driver="GPKG")
+zensus_1km_rlp.to_file("editing_ergebnis/zensus_1km_rlp_absolut.gpkg", driver="GPKG")
+
 
 ## Analyse
 from tobler.model import glm
