@@ -17,7 +17,8 @@ zensus_1km.drop(['Einwohner', 'Durchschni', 'DurchschnH',
        'a30bis49', 'a50bis64', 'a65undaelt', 'AnteilUebe', 'AnteilUnte',
        'AnteilAusl', 'Insgesam_1', 'Vor1919', 'a1919bis19', 'a1949bis19',
        'a1979bis19', 'a1991bis20', 'a2001bis20', 'a2011bis20', 'a2020undsp'], axis=1, inplace=True)
-zensus_1km_df = pd.read_csv("Zensus2022_grid_final_8225047377848191026.csv", header=0, delimiter=",")
+zensus_1km_df = pd.read_csv("Zensus2022_grid_final_227080922168339922.csv", header=0, delimiter=",")
+
 
 
 #########################################################
