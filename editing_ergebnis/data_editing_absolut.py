@@ -3,15 +3,6 @@ import pandas as pd
 import geopandas as gpd
 import pystatis as pystat
 
-# genesis
-# rvLP3&nZtF2q+%@
-
-# zensus pdoerr@freenet.de
-# mk45*ZUkl61t
-
-# regionalstatistik RE013293
-# &8-nJ8*"E}WHy~N
-
 
 # Ergebnisse fuer Landkreise bzw. Wahlkreise
 btw25_ergebnis_kreis = pd.read_csv("btw2025kreis.csv", header=4, delimiter=";")
