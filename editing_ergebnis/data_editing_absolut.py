@@ -279,50 +279,10 @@ zensus_landkreise_geo.to_file("editing_ergebnis/zensus_landkreise_absolut.gpkg",
 zensus_1km_rlp.to_file("editing_ergebnis/zensus_1km_rlp_absolut.gpkg", driver="GPKG")
 
 
-## Analyse
-from tobler.model import glm
-from tobler.area_weighted import area_interpolate
-from tobler.pycno import pycno_interpolate
-import matplotlib.pyplot as plt
 
-gruene = "GRÜNE - Zweitstimmen"
-gruene_anteil = gruene + "_Anteil"
-
-intensive_cols = ['Durchschnittliche Haushaltsgröße',
-       'Durchschnittliche Nettokaltmiete/qm', 'Eigentümerquote',
-       'Leerstandsquote', "Einwohnerdichte", gruene_anteil]
-
-extensive_cols = ["Einwohner", 'Gas', 'Heizöl', 'Holz/Holzpellets',
-       'Biomasse/Biogas', 'Solar/Geothermie/Wärmepumpe', 'Strom', 'Kohle',
-       'Fernwärme', 'kein Energieträger',
-       'Fernheizung', 'Etagenheizung', 'Blockheizung', 'Zentralheizung',
-       'Einzel-/ Mehrraumöfen', 'keine Heizung', 'Personen unter 18 Jahren',
-       'Personen 18 - 29 Jahre', 'Personen 30 - 49 Jahre',
-       'Personen 50 - 64 Jahre', 'Personen 65 Jahre und älter',
-       'Ausländeranteil', 'Gebäude vor 1919',
-       'Gebäude ab 1919 bis 1948', 'Gebäude ab 1949 bis 1978',
-       'Gebäude ab 1979 bis 1990', 'Gebäude ab 1991 bis 2000',
-       'Gebäude ab 2001 bis 2010', 'Gebäude ab 2011 bis 2019',
-       'Gebäude ab 2020 und später', gruene]
-
-test1 = area_interpolate(source_df = zensus_landkreise_rlp, 
-                         target_df=zensus_1km_rlp, n_jobs=3, 
-                         intensive_variables=intensive_cols,
-                         extensive_variables=extensive_cols
-                         )
-
-
-fig, ax = plt.subplots(1,2)
-zensus_landkreise_rlp.plot(column=gruene_anteil)
-test1.plot(column=gruene_anteil)
-plt.show()
-
-test2 = pycno_interpolate(source_df = zensus_landkreise_rlp, 
-                         target_df=zensus_1km_rlp, 
-                         variables= intensive_cols+extensive_cols, cellsize=1000)
-
-test2.plot(column=gruene_anteil)
-
+# Fuer die Regressions-Interpolation benoetigen wir noch Rasterdaten
+# Wir muessen die Daten in dieselbe Projektion bringen wie 
+# die anderen Geodaten.
 
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
@@ -330,7 +290,6 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 src_path = 'rasterdaten/rasterdaten.tif'
 dst_path = 'rasterdaten/rasterdaten_reprojected.tif'
 
-import rasterio
 with rasterio.open(src_path) as src:
     transform, width, height = calculate_default_transform(
         src.crs, zensus_landkreise_rlp.crs, src.width, src.height, *src.bounds)
@@ -371,11 +330,5 @@ with rasterio.open(dst_path) as src:
 with rasterio.open('rasterdaten/rasterdaten_clipped.tif', "w", **out_meta) as dest:
     dest.write(out_image)
 
-zensus_landkreise_rlp.rename({gruene: "GRUENE_Zweitstimmen"}, inplace=True, axis=1)
-zensus_1km_rlp.rename({gruene: "GRUENE_Zweitsteimmen"}, inplace=True, axis=1)
 
-test3, model = glm(source_df = zensus_landkreise_rlp.dropna(), target_df = zensus_1km_rlp.dropna(), variable="GRUENE_Zweitstimmen",
-                   raster="rasterdaten/rasterdaten_clipped.tif", likelihood = "poisson", return_model=True)
-
-test3.plot(column="GRUENE_Zweitstimmen")
 

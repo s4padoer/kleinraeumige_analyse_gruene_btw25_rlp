@@ -317,101 +317,16 @@ zensus_landkreise_geo.to_file("editing_ergebnis/zensus_landkreise_anteile.gpkg",
 zensus_1km_rlp.to_file("editing_ergebnis/zensus_1km_rlp_anteile.gpkg", driver="GPKG")
 final_landkreise.to_csv("editing_ergebnis/Zensus2022_Landkreise.csv")
 
-## Analyse
-from tobler.model import glm
-from tobler.area_weighted import area_interpolate
-from tobler.pycno import pycno_interpolate
 
 
-# Weg wegen Multikollinearitaet:
-
-intensive_cols = [
- 'Biomasse/Biogas',
- 'Personen 18 - 29 Jahre',
- 'Personen 30 - 49 Jahre',
- 'Gebäude ab 1949 bis 1978',
- 'Blockheizung',
- 'Durchschnittliche Nettokaltmiete/qm',
- 'Heizöl',
- 'Einzel-/ Mehrraumöfen',
- 'Einwohner',
- 'Zentralheizung',
- 'Durchschnittliche Haushaltsgröße',
- 'Fernwärme',
- 'kein Energieträger',
- 'Solar/Geothermie/Wärmepumpe',
- 'Gebäude ab 2001 bis 2010',
- 'Gebäude ab 2011 bis 2019',
- 'Ausländeranteil',
- 'Etagenheizung',
- 'Personen 65 Jahre und älter',
- 'Personen 50 - 64 Jahre',
- 'Gebäude ab 1919 bis 1948',
- 'Strom',
- 'Leerstandsquote',
- 'Gas',
- 'Kohle',
- 'Gebäude ab 1979 bis 1990',
- 'Fernheizung',
- 'Gebäude ab 2020 und später',
- 'Eigentümerquote',
- 'Gebäude ab 1991 bis 2000',
- 'Holz/Holzpellets', "GRÜNE - Zweitstimmen_Anteil"]
-
-extensive_cols = ["Einwohnerdichte", "GRÜNE - Zweitstimmen"]
-
-test1 = area_interpolate(source_df = zensus_landkreise_geo, 
-                         target_df=zensus_1km_rlp, n_jobs=3, 
-                         intensive_variables=intensive_cols,
-                         extensive_variables=extensive_cols)
-
-test1.plot(column="GRÜNE - Zweitstimmen_Anteil")
 
 
-test2 = pycno_interpolate(source_df = zensus_landkreise_rlp, 
-                         target_df=zensus_1km_rlp, 
-                         variables= intensive_cols+extensive_cols, cellsize=1000)
-
-test2.plot(column="GRÜNE - Zweitstimmen_Anteil")
 
 
-zensus_landkreise_rlp.rename({"GRÜNE - Zweitstimmen": "GRUENE_Zweitstimmen"}, inplace=True, axis=1)
-zensus_1km_rlp.rename({"GRÜNE - Zweitstimmen": "GRUENE_Zweitstimmen"}, inplace=True, axis=1)
-zensus_landkreise_geo.rename({"GRÜNE - Zweitstimmen": "GRUENE_Zweitstimmen"}, inplace=True, axis=1)
 
-zensus_landkreise_rlp.rename({"GRÜNE - Zweitstimmen_Anteil": "GRUENE_Zweitstimmen_Anteil"}, inplace=True, axis=1)
-zensus_1km_rlp.rename({"GRÜNE - Zweitstimmen_Anteil": "GRUENE_Zweitstimmen_Anteil"}, inplace=True, axis=1)
-zensus_landkreise_geo.rename({"GRÜNE - Zweitstimmen_Anteil": "GRUENE_Zweitstimmen_Anteil"}, inplace=True, axis=1)
 
-test3, model = glm(source_df = zensus_landkreise_rlp.dropna(), target_df = zensus_1km_rlp.dropna(), 
-                   variable="GRUENE_Zweitstimmen",
-                   raster="rasterdaten/rasterdaten_clipped.tif", likelihood = "neg_binomial", return_model=True)
 
-test3.plot(column="GRUENE_Zweitstimmen")
 
-test3a = area_interpolate(test3, zensus_1km_rlp, 
-                          intensive_variables=["GRUENE_Zweitstimmen"])
-
-test3a.plot(column="GRUENE_Zweitstimmen")
-
-from statsmodels.othermod import betareg
-import statsmodels.api as sm
-import numpy as np
-import matplotlib.pyplot as plt
-
-colinear = ['Personen unter 18 Jahren', 'keine Heizung', 'kein Energieträger', 'Gebäude vor 1919']
-
-cols_regression = {x for x in zensus_1km_df.columns.to_list()}
-cols_regression = cols_regression & {x for x in zensus_landkreise.columns.to_list()}
-cols_regression = cols_regression.difference(colinear)
-cols_regression = list(cols_regression)
-
-# Hier sind viele NA's
-cols_regression.remove("Kohle") 
-cols_regression.remove("Biomasse/Biogas")
-cols_regression.remove("Einwohner")
-exog = ["Einwohnerdichte"]
-cols_regression.remove(exog[0])
 
 df = zensus_landkreise_geo[cols_regression+exog+["GRUENE_Zweitstimmen_Anteil",ars]].dropna()
 
