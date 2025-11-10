@@ -10,3 +10,5 @@ Die Daten stammen von:
 - https://atlas.zensus2022.de/ (fuer die Daten ueber pystat bezogen)
 - K-2023-AI002-1-5--AI0201--2025-10-26 : Shapefiles der Landkreise
 - https://plattform-npgeo-vfdb.hub.arcgis.com/datasets/esri-de-content::zensus-2022-gitterzellen/explore?layer=1 (für das Zensus2022_grid im .gitignore aufgrund der Datengröße)
+
+Die Hauptanalyse findet in analyse_anteile.ipynb statt und am sinnvollsten hat sich eine Beta-Regression erwiesen, die den Anteil der Grünen Zweitstimmen auf allen Landkreisen in Deutschland schätzt und dieses Modell dann auf die 1-qkm-Gitterzellen in Rheinland-Pfalz anwendet. Anhand eines ausgewählten Modells werden dann Stimmanteile auf Ebene der Gitterzellen vorhergesagt und das Ergebnis final mit den Straßenzügen aus Open Street Map verschnitten. 
