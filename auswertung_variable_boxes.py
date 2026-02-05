@@ -17,13 +17,7 @@ import contextily as ctx
 from pyrosm import get_data, OSM
 import matplotlib.colors as colors
 
-#bbox = [6.63, 49.72, 6.71, 49.79] # Trier
-bbox = [7.55, 50.20, 7.70, 50.30] # Brey, Rhens, Spay und Waldesch
 
-#bounds = [[49.39, 6.1], [50.57, 7.6]] # Trier
-bounds = [[50.20, 7.55], [50.30, 7.70]] # Brey, Rhens, Spay und Waldesch
-
-location = np.array(np.asmatrix(bounds).mean(axis = 0)).reshape(-1)
 # Laden der Daten, die wir in data_editing_absolut.py 
 # bzw. _anteile.py zusammengestellt haben
 
@@ -162,44 +156,71 @@ zensus_1km_rlp["prediction2"] = best_model2.predict(
 test2 = area_interpolate(zensus_1km_rlp, zensus_1km_rlp, intensive_variables=["prediction2"])
 test2.plot(column="prediction2")
 
-osm = OSM("rheinland-pfalz-251020.osm.pbf", bounding_box=bbox)
-roads = osm.get_network(network_type="driving") 
-roads = roads.to_crs(zensus_1km_rlp.crs)
+#####################################################################################################
+#### Darstellung
 
-joined = gpd.sjoin(roads, test, predicate='intersects')
-ax = joined.plot(column='prediction', legend=True, linewidth=2, figsize=(10, 10), cmap='viridis', alpha=0.8)
+trier = gpd.read_file("ortsbezirke_trier.geojson")
 
-# OpenStreetMap als Hintergrundkarte hinzufügen
-ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
+bbox_dict = {}
+for _, row in trier.iterrows():
+    minx, miny, maxx, maxy = row.geometry.bounds
+    bbox_dict[row["ORTSBEZIRK"]] = [minx, miny, maxx, maxy]
 
-ax.set_axis_off()
-plt.show()
+for name, bbox in bbox_dict.items():
+    bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]]
+    location = np.array(np.asmatrix(bounds).mean(axis = 0)).reshape(-1)
+
+    osm = OSM("rheinland-pfalz-251020.osm.pbf", bounding_box=bbox)
+    roads = osm.get_network(network_type="driving") 
+    roads = roads.to_crs(zensus_1km_rlp.crs)
+
+    joined = gpd.sjoin(roads, test, predicate='intersects')
+    ax = joined.plot(column='prediction', legend=True, linewidth=2, figsize=(10, 10), cmap='viridis', alpha=0.8)
+
+    # OpenStreetMap als Hintergrundkarte hinzufügen
+    ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
+
+    ax.set_axis_off()
+    plt.show()
 
 
-joined2 = gpd.sjoin(roads, test2, predicate='intersects')
-vmin = joined2['prediction2'].clip(lower=1e-6).min()
-vmax = joined2['prediction2'].max()
-ax2 = joined2.plot(column='prediction2', legend=True, linewidth=2, 
+    joined2 = gpd.sjoin(roads, test2, predicate='intersects')
+    vmin = joined2['prediction2'].clip(lower=1e-6).min()
+    vmax = joined2['prediction2'].max()
+    ax2 = joined2.plot(column='prediction2', legend=True, linewidth=2, 
                    figsize=(10, 10), cmap='magma', alpha=0.8)
 
-# OpenStreetMap als Hintergrundkarte hinzufügen
-ctx.add_basemap(ax2, source=ctx.providers.OpenStreetMap.Mapnik)
+    # OpenStreetMap als Hintergrundkarte hinzufügen
+    ctx.add_basemap(ax2, source=ctx.providers.OpenStreetMap.Mapnik)
 
-ax2.set_axis_off()
-plt.savefig("karte_strassenzuege.png", dpi=300, bbox_inches="tight")
-plt.show()
+    ax2.set_axis_off()
+    plt.savefig(f"grafiken/{name}_karte_strassenzuege.png", dpi=300, bbox_inches="tight")
+    plt.show()
 
-ax2 = joined2.plot(column='prediction2', legend=True, 
+    ax2 = joined2.plot(column='prediction2', legend=True, 
                    linewidth=2, figsize=(10, 10), cmap='magma', 
                    norm=colors.LogNorm(vmin=vmin, vmax=vmax), alpha=0.8)
 
-# OpenStreetMap als Hintergrundkarte hinzufügen
-ctx.add_basemap(ax2, source=ctx.providers.OpenStreetMap.Mapnik)
+    # OpenStreetMap als Hintergrundkarte hinzufügen
+    ctx.add_basemap(ax2, source=ctx.providers.OpenStreetMap.Mapnik)
 
-ax2.set_axis_off()
-plt.savefig("karte_strassenzuege_logskala.png", dpi=300, bbox_inches="tight")
-plt.show()
+    ax2.set_axis_off()
+    plt.savefig(f"grafiken/{name}_karte_strassenzuege_logskala.png", dpi=300, bbox_inches="tight")
+    plt.show()
 
+#bbox = [6.63, 49.72, 6.71, 49.79] # Trier
+#bbox = [7.55, 50.20, 7.70, 50.30] # Brey, Rhens, Spay und Waldesch
+#bbox = [7.50, 50.25, 7.60, 50.30]
+#bbox = [6.64, 49.79, 6.73, 49.83] # Ehrang/ Quint
+
+#bounds = [[49.39, 6.1], [50.57, 7.6]] # Trier
+#bounds = [[50.20, 7.55], [50.30, 7.70]] # Brey, Rhens, Spay und Waldesch
+#bounds = [[50.25, 7.50], [50.30, 7.60]] # Waldesch
+#bounds = [[49.79, 6.64], [49.83, 6.73]] # Ehrang/ Quint
+
+
+################### Bei Bedarf das hier auch in die Loop rein,
+################### um zentrierte html-Grafiken zu erstellen
 pred = 'prediction2'
 m = folium.Map(location=location, zoom_start=8, max_bounds=True)
 m.fit_bounds(bounds)
