@@ -167,6 +167,7 @@ for _, row in trier.iterrows():
     bbox_dict[row["ORTSBEZIRK"]] = [minx, miny, maxx, maxy]
 
 for name, bbox in bbox_dict.items():
+    name = name.replace("/", "_")
     bounds = [[bbox[1], bbox[0]], [bbox[3], bbox[2]]]
     location = np.array(np.asmatrix(bounds).mean(axis = 0)).reshape(-1)
 
