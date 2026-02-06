@@ -159,7 +159,7 @@ test2.plot(column="prediction2")
 #####################################################################################################
 #### Darstellung
 
-trier = gpd.read_file("ortsbezirke_trier.geojson")
+trier = gpd.read_file("ortsbezirke_trier2.geojson")
 
 bbox_dict = {}
 for _, row in trier.iterrows():
