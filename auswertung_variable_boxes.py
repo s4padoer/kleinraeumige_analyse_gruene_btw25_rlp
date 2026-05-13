@@ -156,6 +156,11 @@ zensus_1km_rlp["prediction2"] = best_model2.predict(
 test2 = area_interpolate(zensus_1km_rlp, zensus_1km_rlp, intensive_variables=["prediction2"])
 test2.plot(column="prediction2")
 
+## Für das Deployment:
+
+zensus_1km_rlp.to_file("deployment/zensus_1km_rlp_with_predictions.geojson", driver="GeoJSON")
+
+
 #####################################################################################################
 #### Darstellung
 
