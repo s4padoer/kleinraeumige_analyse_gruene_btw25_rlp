@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grüne Wähleranteile in Rheinland-Pfalz</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Leaflet JS (MUSS VOR dem Heat Plugin geladen werden!) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet Heat Plugin (MUSS NACH Leaflet JS geladen werden!) -->
+    <!-- <script src="https://unpkg.com/leaflet-heat@0.2.0/dist/leaflet.heat.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.min.js"></script>
+
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        #landkreis-select {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            padding: 5px;
+            background: white;
+            border-radius: 5px;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            max-width: 300px;
+        }
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <select id="landkreis-select" onchange="filterByLandkreis()">
+        <option value="">Landkreis auswählen</option>
+    </select>
+    <div id="info">Wähle einen Landkreis aus</div>
+    <div id="map"></div>
+    <div class="legend">
+        <h4>Grüne Wähleranteil</h4>
+        <div><span style="color: blue;">●</span> Niedrig (0-20%)</div>
+        <div><span style="color: lime;">●</span> Mittel (20-40%)</div>
+        <div><span style="color: yellow;">●</span> Hoch (40-60%)</div>
+        <div><span style="color: orange;">●</span> Sehr hoch (60-80%)</div>
+        <div><span style="color: red;">●</span> Extrem hoch (80-100%)</div>
+    </div>
+
+    <script>
+        // Initialisiere die Karte
+        const map = L.map('map').setView([50.0, 7.5], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        // Globale Variablen
+        let allHeatmapData = [];
+        let heatmapLayer;
+
+        // Lade die Landkreise und Heatmap-Daten beim Start der Seite
+        window.onload = function() {
+            // 1. Lade die Landkreise für das Dropdown
+            fetch('/landkreise')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    const select = document.getElementById('landkreis-select');
+                    select.innerHTML = '<option value="">Landkreis auswählen</option>';
+                    data.landkreise.forEach(landkreis => {
+                        const option = document.createElement('option');
+                        option.value = landkreis;
+                        option.textContent = landkreis;
+                        select.appendChild(option);
+                    });
+                    console.log("Dropdown mit Landkreisen befüllt:", data.landkreise);
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden der Landkreise:', error);
+                    alert('Fehler beim Laden der Landkreise: ' + error.message);
+                });
+
+            // 2. Lade die Heatmap-Daten
+            fetch('/heatmap')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    allHeatmapData = data.heatmap;
+                    console.log("Heatmap-Daten geladen:", allHeatmapData.length, "Punkte");
+                    showHeatmap(allHeatmapData);
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden der Heatmap-Daten:', error);
+                    alert('Fehler beim Laden der Heatmap-Daten: ' + error.message);
+                });
+        };
+
+        // Zeige die Heatmap mit den gegebenen Daten
+        function showHeatmap(data) {
+            // Entferne alte Heatmap
+            if (window.heatmapLayer) {
+                map.removeLayer(window.heatmapLayer);
+            }
+
+            // Erstelle neue Heatmap
+            const heatData = data.map(point => [point.lat, point.lng, point.value || 0]);
+
+            // Prüfe, ob L.heatLayer verfügbar ist
+            if (typeof L.heatLayer === 'function') {
+                heatmapLayer = L.heatLayer(heatData, {
+                    radius: 15,
+                    blur: 10,
+                    maxZoom: 18,
+                    gradient: {
+                        0.0: 'blue',
+                        0.2: 'lime',
+                        0.4: 'yellow',
+                        0.6: 'orange',
+                        1.0: 'red'
+                    }
+                }).addTo(map);
+            } else {
+                console.error("L.heatLayer ist nicht verfügbar! Heat Plugin nicht geladen.");
+                alert("Fehler: Heatmap-Plugin nicht geladen. Bitte lade die Seite neu.");
+            }
+        }
+
+        // Filtere die Heatmap nach Landkreis
+        function filterByLandkreis() {
+            const select = document.getElementById('landkreis-select');
+            const landkreis = select.value;
+
+            if (!landkreis) {
+                showHeatmap(allHeatmapData);
+                map.setView([50.0, 7.5], 8);
+                return;
+            }
+
+            const filteredData = allHeatmapData.filter(point => point.landkreis === landkreis);
+            console.log(`Gefilterte Daten für ${landkreis}:`, filteredData.length, "Punkte");
+            showHeatmap(filteredData);
+
+            fetch(`/bounds/${encodeURIComponent(landkreis)}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Bounds nicht gefunden');
+                    return response.json();
+                })
+                .then(data => {
+                    const bounds = L.latLngBounds(
+                        [data.bounds[0][0], data.bounds[0][1]],
+                        [data.bounds[1][0], data.bounds[1][1]]
+                    );
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                })
+                .catch(error => {
+                    console.error('Fehler beim Laden der Bounds:', error);
+                    if (filteredData.length > 0) {
+                        const latLngs = filteredData.map(point => [point.lat, point.lng]);
+                        const bounds = L.latLngBounds(latLngs);
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

@@ -158,7 +158,7 @@ test2.plot(column="prediction2")
 
 ## Für das Deployment:
 
-zensus_1km_rlp.to_file("deployment/zensus_1km_rlp_with_predictions.geojson", driver="GeoJSON")
+zensus_1km_rlp[['id', 'GITTER_ID_', 'OBJECTID', 'GITTER_ID_1km', 'geometry', 'prediction', 'prediction2']].to_file("deployment/data/zensus_1km_rlp_with_predictions.geojson", driver="GeoJSON")
 
 
 #####################################################################################################

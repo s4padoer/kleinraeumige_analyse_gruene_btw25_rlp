@@ -1,6 +1,8 @@
 import os
 import osmnx as ox
 import geopandas as gpd
+import json
+from tobler.area_weighted import area_interpolate
 
 data_path = os.path.join(os.path.dirname(__file__), "data")
 
@@ -10,11 +12,23 @@ gdf = gpd.read_file(os.path.join(data_path, "zensus_1km_rlp_with_predictions.geo
 
 ## Strassenzuege abspeichern, um das Laden zu reduzieren:
 # Lade die Verwaltungsgrenzen von RLP
-import os
-import osmnx as ox
-rlp_regions = gpd.read_file(os.path.join("deployment", "app", "data", "kreise-rlp-2026.geojson"))
+rlp_regions = gpd.read_file(os.path.join(data_path, "kreise-rlp-2026.geojson"))
 # Liste der verfügbaren Regionen
 regions = rlp_regions["name"].unique().tolist() 
+
+rlp_regions.to_crs(gdf.crs, inplace=True)
+
+test2 = area_interpolate(gdf, gdf, intensive_variables=["prediction2"])
+
+zensus_with_landkreis = gpd.sjoin(
+    test2,
+    rlp_regions,
+    predicate="intersects",  # oder "intersects", falls Rasterzellen an Kreisgrenzen liegen
+    how="left"  # Behalte alle Rasterzellen, auch wenn sie keinem Landkreis zugeordnet sind
+)
+zensus_with_landkreis["centroids"] = zensus_with_landkreis.centroid
+zensus_with_landkreis[['prediction2', 'geometry', 'index_right', 'objectid', 'region', 'code',
+       'name', 'de_entity', 'fr_entity', 'en_entity', 'fourcolor']].to_file(os.path.join(data_path, "landkreise_with_predictions.geojson"), driver="GeoJSON")
 
 for kreis in regions:
     # Filtere Zensus-Daten für den aktuellen Landkreis
@@ -32,19 +46,17 @@ for kreis in regions:
     # Speichere das Ergebnis
     joined.to_file(os.path.join(data_path, f"strassen_{kreis.lower().replace(" ", "_")}.gpkg"), driver="GPKG")
 
-# Zentroide der Rasterzellen berechnen
-gdf["geometry"] = gdf.centroid
 
 # Heatmap-Daten erstellen
 heatmap_data = []
-for _, row in gdf.iterrows():
+for _, row in zensus_with_landkreis.iterrows():
     heatmap_data.append({
-        "lat": row.geometry.y,
-        "lng": row.geometry.x,
-        "value": row["prediction2"]
+        "lat": row.centroids.y,
+        "lng": row.centroids.x,
+        "value": row.prediction2,
+        "landkreis": row.name
     })
 
 # Speichern als JSON
-import json
-with open("heatmap_data.json", "w") as f:
+with open(os.path.join(data_path, "heatmap_data.json"), "w") as f:
     json.dump(heatmap_data, f)
