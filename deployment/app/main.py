@@ -71,7 +71,7 @@ def get_bounds(landkreis_name: str):
         raise HTTPException(status_code=500, detail=f"Fehler: {e}")
     
 
-@app.get("/straßen/{landkreis_name}")
+@app.get("/strassen/{landkreis_name}")
 def get_straßen(landkreis_name: str):
     """Lädt die Straßen für einen Landkreis dynamisch."""
     filename = landkreis_name.lower().replace(" ", "_")

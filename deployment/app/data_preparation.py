@@ -17,9 +17,16 @@ rlp_regions = gpd.read_file(os.path.join(data_path, "kreise-rlp-2026.geojson"))
 # Liste der verfügbaren Regionen
 regions = rlp_regions["name"].unique().tolist() 
 
-rlp_regions.to_crs(gdf.crs, inplace=True)
+if rlp_regions.crs != "EPSG:4326":
+    rlp_regions = rlp_regions.to_crs("EPSG:4326")
+    print("Umgewandeltes CRS:", rlp_regions.crs) 
+
+if gdf.crs != "EPSG:4326":
+    gdf = gdf.to_crs("EPSG:4326")
+    print("Umgewandeltes CRS:", gdf.crs) 
 
 test2 = area_interpolate(gdf, gdf, intensive_variables=["prediction2"])
+
 
 zensus_with_landkreis = gpd.sjoin(
     test2,
@@ -32,7 +39,8 @@ zensus_with_landkreis["centroids"] = zensus_with_landkreis.centroid
 # Falls das CRS nicht EPSG:4326 ist, umwandeln
 if zensus_with_landkreis.crs != "EPSG:4326":
     zensus_with_landkreis = zensus_with_landkreis.to_crs("EPSG:4326")
-    print("Umgewandeltes CRS:", zensus_with_landkreis.crs)  
+    print("Umgewandeltes CRS:", zensus_with_landkreis.crs) 
+
 zensus_with_landkreis[['prediction2', 'geometry', 'index_right', 'objectid', 'region', 'code',
        'name', 'de_entity', 'fr_entity', 'en_entity', 'fourcolor']].to_file(os.path.join(data_path, "landkreise_with_predictions.geojson"), driver="GeoJSON")
 

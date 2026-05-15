@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Grüne Wähleranteile - Heatmap</title>
+    <title>Geschätzte Grüne Wähleranteile - Heatmap und Straßen</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="/static/style.css" />
     <style>
@@ -13,6 +13,41 @@
             padding: 5px;
             background: white;
             border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #4CAF50;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -21,6 +56,21 @@
     <select id="landkreis-select">
         <option value="">Landkreis auswählen</option>
     </select>
+    <div id="legend">
+        <h4>Wähleranteil GRÜNE</h4>
+        <div><span style="color:#FFFFFF; background-color:#006400;">●</span> 0-2%</div>
+        <div><span style="color:#FFFFFF; background-color:#008000;">●</span> 2-4%</div>
+        <div><span style="color:#FFFFFF; background-color:#009900;">●</span> 4-6%</div>
+        <div><span style="color:#FFFFFF; background-color:#00B300;">●</span> 6-8%</div>
+        <div><span style="color:#FFFFFF; background-color:#00CC00;">●</span> 8-10%</div>
+        <div><span style="color:#FFFFFF; background-color:#00E600;">●</span> 10-12%</div>
+        <div><span style="color:#FFFFFF; background-color:#00FF00;">●</span> 12-15%</div>
+        <div><span style="color:#FFFFFF; background-color:#33FF33;">●</span> 15-20%</div>
+    </div>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div>Daten werden geladen...</div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
@@ -31,71 +81,146 @@
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
+        // Variablen für Layer
+        let heatLayer = null;
+        let streetsLayer = null;
+        const loadingElement = document.getElementById('loading');
+
+        // Ladeanzeige ein/ausschalten
+        function showLoading() {
+            loadingElement.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loadingElement.style.display = 'none';
+        }
+
         // Dropdown für Landkreise füllen
+        showLoading();
         fetch('/landkreise')
             .then(response => response.json())
             .then(data => {
                 const select = document.getElementById('landkreis-select');
-                data.landkreise.forEach(landkreis => {
+                // Sortiere die Landkreise alphabetisch
+                const sortedLandkreise = data.landkreise.sort((a, b) => {
+                    // Spezielle Sortierung: Städte mit "Stadt" vorne, dann alphabetisch
+                    const aIsCity = a.startsWith("Stadt ");
+                    const bIsCity = b.startsWith("Stadt ");
+
+                    if (aIsCity && !bIsCity) return -1;
+                    if (!aIsCity && bIsCity) return 1;
+                    return a.localeCompare(b);
+                });
+
+                sortedLandkreise.forEach(landkreis => {
                     const option = document.createElement('option');
                     option.value = landkreis;
                     option.textContent = landkreis;
                     select.appendChild(option);
                 });
+                hideLoading();
+            })
+            .catch(error => {
+                console.error("Fehler beim Laden der Landkreise:", error);
+                hideLoading();
             });
 
         // Heatmap-Daten laden und anzeigen
-        let heatLayer = null;
+        showLoading();
         fetch('/heatmap')
             .then(response => response.json())
             .then(data => {
-                // Debugging: Datenstruktur überprüfen
                 console.log("Rohdaten:", data.heatmap.slice(0, 5));
 
-                // Daten aufbereiten und ungültige Werte filtern
                 const heatData = data.heatmap
-                    .map(point => {
-                        // Extrahiere lat, lng und value aus dem Objekt
-                        return [point.lat, point.lng, point.value];
-                    })
-                    .filter(point => {
-                        // Filtere ungültige Werte (NaN, undefined, null, 0)
-                        console.log("Ungültigen Wert in Daten gefunden!")
-                        return !isNaN(point[0]) && !isNaN(point[1]) && !isNaN(point[2]) && point[2] > 0;
-                    });
+                    .map(point => [point.lat, point.lng, point.value])
+                    .filter(point => !isNaN(point[0]) && !isNaN(point[1]) && !isNaN(point[2]) && point[2] > 0);
 
-                // Debugging: Gefilterte Daten überprüfen
                 console.log("Gefilterte Heatmap-Daten:", heatData.slice(0, 5));
 
-                // Heatmap erstellen
                 if (heatData.length > 0) {
                     heatLayer = L.heatLayer(heatData, {
                         radius: 15,
                         blur: 10,
                         maxZoom: 18,
-                        gradient: { 0.4: 'blue', 0.6: 'green', 0.8: 'yellow', 1.0: 'red' }
+                        gradient: {
+                            0.0: '#000000',   // Schwarz für 0%
+                            0.1: '#00008B',   // Dunkelblau
+                            0.2: '#0000FF',   // Blau
+                            0.3: '#0080FF',   // Hellblau
+                            0.4: '#00FFFF',   // Cyan
+                            0.5: '#00FF80',   // Grün-Cyan
+                            0.6: '#80FF00',   // Chartreuse
+                            0.7: '#FFFF00',   // Gelb
+                            0.8: '#FF8000',   // Orange
+                            0.9: '#FF0000',   // Rot
+                            1.0: '#FF00FF'    // Magenta für maximale Werte
+                        },
+                        max: 0.2  // Skalierung auf 0-20% anpassen
                     }).addTo(map);
-                    console.log("Heatmap wurde zur Karte hinzugefügt!");
-
-                } else {
-                    console.error("Keine gültigen Heatmap-Daten gefunden!");
                 }
+                hideLoading();
             })
             .catch(error => {
-                console.error("Fehler beim Laden der Heatmap-Daten:", error);
+                console.error("Fehler beim Laden der Heatmap:", error);
+                hideLoading();
             });
 
-        // Landkreis-Auswahl-Handler
+        // Straßen für den ausgewählten Landkreis laden und anzeigen
         document.getElementById('landkreis-select').addEventListener('change', function() {
             const landkreis = this.value;
             if (!landkreis) return;
 
-            fetch(`/bounds/${landkreis}`)
+            showLoading();
+
+            // Alten Straßen-Layer entfernen
+            if (streetsLayer) {
+                map.removeLayer(streetsLayer);
+            }
+
+            // Straßen-Daten laden
+            fetch(`/strassen/${landkreis}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Straßen-Daten:", data.features.slice(0, 3));
+
+                    streetsLayer = L.geoJSON(data, {
+                        style: function(feature) {
+                            const value = feature.properties.prediction2 || 0;
+                            console.log("Straßen-Wert:", value); // Debugging
+                            return {
+                                color: getColor(value),
+                                weight: 3,
+                                opacity: 0.7
+                            };
+                        }
+                    }).addTo(map);
+
+                    // Karte auf den Landkreis zoomen
+                    return fetch(`/bounds/${landkreis}`);
+                })
                 .then(response => response.json())
                 .then(data => {
                     map.fitBounds(data.bounds);
+                    hideLoading();
+                })
+                .catch(error => {
+                    console.error("Fehler beim Laden der Straßen:", error);
+                    hideLoading();
                 });
         });
+
+        // Fein abgestufte Farbskala für 0-20%
+        function getColor(value) {
+            if (value <= 0.02) return '#006400';  // 0-2%
+            else if (value <= 0.04) return '#008000';  // 2-4%
+            else if (value <= 0.06) return '#009900';  // 4-6%
+            else if (value <= 0.08) return '#00B300';  // 6-8%
+            else if (value <= 0.10) return '#00CC00';  // 8-10%
+            else if (value <= 0.12) return '#00E600';  // 10-12%
+            else if (value <= 0.15) return '#00FF00';  // 12-15%
+            else return '#33FF33';  // 15-20%
+        }
     </script>
 </body>
 </html>
