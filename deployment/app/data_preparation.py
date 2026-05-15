@@ -34,20 +34,20 @@ zensus_with_landkreis = gpd.sjoin(
     predicate="intersects",  # oder "intersects", falls Rasterzellen an Kreisgrenzen liegen
     how="left"  # Behalte alle Rasterzellen, auch wenn sie keinem Landkreis zugeordnet sind
 )
-zensus_with_landkreis["centroids"] = zensus_with_landkreis.centroid
 
 # Falls das CRS nicht EPSG:4326 ist, umwandeln
 if zensus_with_landkreis.crs != "EPSG:4326":
     zensus_with_landkreis = zensus_with_landkreis.to_crs("EPSG:4326")
     print("Umgewandeltes CRS:", zensus_with_landkreis.crs) 
 
-zensus_with_landkreis[['prediction2', 'geometry', 'index_right', 'objectid', 'region', 'code',
+zensus_with_landkreis.rename({"index_right": "index"}, axis=1, inplace = True)
+zensus_with_landkreis[['prediction2', 'geometry', 'index', 'objectid', 'region', 'code',
        'name', 'de_entity', 'fr_entity', 'en_entity', 'fourcolor']].to_file(os.path.join(data_path, "landkreise_with_predictions.geojson"), driver="GeoJSON")
 
 
 for kreis in regions:
     # Filtere Zensus-Daten für den aktuellen Landkreis
-    zensus_kreis = rlp_regions[rlp_regions["name"] == kreis]
+    zensus_kreis = zensus_with_landkreis[zensus_with_landkreis["name"] == kreis]
 
     # Lade OSM-Straßen für den Landkreis (Bounding Box aus Zensus-Daten)
     bbox = zensus_kreis.total_bounds
@@ -57,21 +57,6 @@ for kreis in regions:
 
     # Räumlicher Join
     joined = gpd.sjoin(roads, zensus_kreis, predicate="intersects")
-
+    
     # Speichere das Ergebnis
     joined.to_file(os.path.join(data_path, f"strassen_{kreis.lower().replace(" ", "_")}.gpkg"), driver="GPKG")
-
-
-# Heatmap-Daten erstellen
-heatmap_data = []
-for _, row in zensus_with_landkreis.iterrows():
-    heatmap_data.append({
-        "lat": row.centroids.y,
-        "lng": row.centroids.x,
-        "value": row.prediction2,
-        "landkreis": row["name"]
-    })
-
-# Speichern als JSON
-with open(os.path.join(data_path, "heatmap_data.json"), "w") as f:
-    json.dump(heatmap_data, f)

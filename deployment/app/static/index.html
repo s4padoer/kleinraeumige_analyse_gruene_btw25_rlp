@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Geschätzte Grüne Wähleranteile - Heatmap und Straßen</title>
+    <title>Geschätzte Grüne Wähleranteile - Straßen</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="/static/style.css" />
     <style>
@@ -14,6 +14,7 @@
             background: white;
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+            width: 250px;
         }
         #legend {
             position: absolute;
@@ -49,6 +50,14 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .legend-color-box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -57,15 +66,15 @@
         <option value="">Landkreis auswählen</option>
     </select>
     <div id="legend">
-        <h4>Wähleranteil GRÜNE</h4>
-        <div><span style="color:#FFFFFF; background-color:#006400;">●</span> 0-2%</div>
-        <div><span style="color:#FFFFFF; background-color:#008000;">●</span> 2-4%</div>
-        <div><span style="color:#FFFFFF; background-color:#009900;">●</span> 4-6%</div>
-        <div><span style="color:#FFFFFF; background-color:#00B300;">●</span> 6-8%</div>
-        <div><span style="color:#FFFFFF; background-color:#00CC00;">●</span> 8-10%</div>
-        <div><span style="color:#FFFFFF; background-color:#00E600;">●</span> 10-12%</div>
-        <div><span style="color:#FFFFFF; background-color:#00FF00;">●</span> 12-15%</div>
-        <div><span style="color:#FFFFFF; background-color:#33FF33;">●</span> 15-20%</div>
+        <h4>Straßenfarben (Wähleranteil GRÜNE)</h4>
+        <div><span class="legend-color-box" style="background-color: #000000;"></span> 0-2%</div>
+        <div><span class="legend-color-box" style="background-color: #00008B;"></span> 2-4%</div>
+        <div><span class="legend-color-box" style="background-color: #0000FF;"></span> 4-6%</div>
+        <div><span class="legend-color-box" style="background-color: #0080FF;"></span> 6-8%</div>
+        <div><span class="legend-color-box" style="background-color: #00FFFF;"></span> 8-10%</div>
+        <div><span class="legend-color-box" style="background-color: #00FF80;"></span> 10-12%</div>
+        <div><span class="legend-color-box" style="background-color: #80FF00;"></span> 12-15%</div>
+        <div><span class="legend-color-box" style="background-color: #FFFF00;"></span> 15-20%</div>
     </div>
     <div id="loading">
         <div class="spinner"></div>
@@ -73,7 +82,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script>
         // Initialisiere die Karte
         const map = L.map('map').setView([50.11, 7.3], 8);
@@ -82,7 +90,6 @@
         }).addTo(map);
 
         // Variablen für Layer
-        let heatLayer = null;
         let streetsLayer = null;
         const loadingElement = document.getElementById('loading');
 
@@ -101,12 +108,9 @@
             .then(response => response.json())
             .then(data => {
                 const select = document.getElementById('landkreis-select');
-                // Sortiere die Landkreise alphabetisch
                 const sortedLandkreise = data.landkreise.sort((a, b) => {
-                    // Spezielle Sortierung: Städte mit "Stadt" vorne, dann alphabetisch
                     const aIsCity = a.startsWith("Stadt ");
                     const bIsCity = b.startsWith("Stadt ");
-
                     if (aIsCity && !bIsCity) return -1;
                     if (!aIsCity && bIsCity) return 1;
                     return a.localeCompare(b);
@@ -125,47 +129,6 @@
                 hideLoading();
             });
 
-        // Heatmap-Daten laden und anzeigen
-        showLoading();
-        fetch('/heatmap')
-            .then(response => response.json())
-            .then(data => {
-                console.log("Rohdaten:", data.heatmap.slice(0, 5));
-
-                const heatData = data.heatmap
-                    .map(point => [point.lat, point.lng, point.value])
-                    .filter(point => !isNaN(point[0]) && !isNaN(point[1]) && !isNaN(point[2]) && point[2] > 0);
-
-                console.log("Gefilterte Heatmap-Daten:", heatData.slice(0, 5));
-
-                if (heatData.length > 0) {
-                    heatLayer = L.heatLayer(heatData, {
-                        radius: 15,
-                        blur: 10,
-                        maxZoom: 18,
-                        gradient: {
-                            0.0: '#000000',   // Schwarz für 0%
-                            0.1: '#00008B',   // Dunkelblau
-                            0.2: '#0000FF',   // Blau
-                            0.3: '#0080FF',   // Hellblau
-                            0.4: '#00FFFF',   // Cyan
-                            0.5: '#00FF80',   // Grün-Cyan
-                            0.6: '#80FF00',   // Chartreuse
-                            0.7: '#FFFF00',   // Gelb
-                            0.8: '#FF8000',   // Orange
-                            0.9: '#FF0000',   // Rot
-                            1.0: '#FF00FF'    // Magenta für maximale Werte
-                        },
-                        max: 0.2  // Skalierung auf 0-20% anpassen
-                    }).addTo(map);
-                }
-                hideLoading();
-            })
-            .catch(error => {
-                console.error("Fehler beim Laden der Heatmap:", error);
-                hideLoading();
-            });
-
         // Straßen für den ausgewählten Landkreis laden und anzeigen
         document.getElementById('landkreis-select').addEventListener('change', function() {
             const landkreis = this.value;
@@ -173,31 +136,29 @@
 
             showLoading();
 
-            // Alten Straßen-Layer entfernen
             if (streetsLayer) {
                 map.removeLayer(streetsLayer);
             }
 
             // Straßen-Daten laden
-            fetch(`/strassen/${landkreis}`)
+            fetch(`/strassen/${encodeURIComponent(landkreis)}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("Straßen-Daten:", data.features.slice(0, 3));
 
+                    // Straßen mit den 1km-Grid-Werten einfärben
                     streetsLayer = L.geoJSON(data, {
                         style: function(feature) {
                             const value = feature.properties.prediction2 || 0;
-                            console.log("Straßen-Wert:", value); // Debugging
                             return {
-                                color: getColor(value),
+                                color: getStreetColor(value),
                                 weight: 3,
                                 opacity: 0.7
                             };
                         }
                     }).addTo(map);
 
-                    // Karte auf den Landkreis zoomen
-                    return fetch(`/bounds/${landkreis}`);
+                    return fetch(`/bounds/${encodeURIComponent(landkreis)}`);
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -210,16 +171,16 @@
                 });
         });
 
-        // Fein abgestufte Farbskala für 0-20%
-        function getColor(value) {
-            if (value <= 0.02) return '#006400';  // 0-2%
-            else if (value <= 0.04) return '#008000';  // 2-4%
-            else if (value <= 0.06) return '#009900';  // 4-6%
-            else if (value <= 0.08) return '#00B300';  // 6-8%
-            else if (value <= 0.10) return '#00CC00';  // 8-10%
-            else if (value <= 0.12) return '#00E600';  // 10-12%
-            else if (value <= 0.15) return '#00FF00';  // 12-15%
-            else return '#33FF33';  // 15-20%
+        // Farbskala für Straßen (basierend auf den 1km-Grid-Werten)
+        function getStreetColor(value) {
+            if (value <= 0.02) return '#000000';    // 0-2%
+            else if (value <= 0.04) return '#00008B'; // 2-4%
+            else if (value <= 0.06) return '#0000FF'; // 4-6%
+            else if (value <= 0.08) return '#0080FF'; // 6-8%
+            else if (value <= 0.10) return '#00FFFF'; // 8-10%
+            else if (value <= 0.12) return '#00FF80'; // 10-12%
+            else if (value <= 0.15) return '#80FF00'; // 12-15%
+            else return '#FFFF00';                  // 15-20%
         }
     </script>
 </body>

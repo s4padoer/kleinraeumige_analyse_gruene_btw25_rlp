@@ -30,10 +30,6 @@ if rlp_regions.crs != "EPSG:4326":
     print("Umgewandeltes CRS:", rlp_regions.crs)  
 regions = rlp_regions["name"].unique().tolist() 
 
-# Lade die vorbereiteten Daten
-with open(os.path.join(data_path, "heatmap_data.json"), "r") as f:
-    heatmap_data = json.load(f)
-
 @app.get("/", response_class=HTMLResponse)
 def read_root():
     # Lade den Inhalt der index.html und gib ihn als HTML-Response zurück
@@ -45,11 +41,6 @@ def read_root():
 def get_landkreise():
     """Gibt alle verfügbaren Landkreise zurück."""
     return {"landkreise": regions}
-
-@app.get("/heatmap")
-def get_heatmap():
-    """Gibt alle Heatmap-Daten zurück (für alle Landkreise)."""
-    return {"heatmap": heatmap_data}
 
 @app.get("/bounds/{landkreis_name}")
 def get_bounds(landkreis_name: str):
@@ -73,21 +64,29 @@ def get_bounds(landkreis_name: str):
 
 @app.get("/strassen/{landkreis_name}")
 def get_straßen(landkreis_name: str):
-    """Lädt die Straßen für einen Landkreis dynamisch."""
+    """Lädt die Straßen für einen Landkreis mit 1km-Grid-Werten."""
     filename = landkreis_name.lower().replace(" ", "_")
     try:
         file_path = os.path.join(data_path, f"strassen_{filename}.gpkg")
+
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="Landkreis nicht gefunden")
+            # Liste alle verfügbaren Dateien für Debugging
+            print("Verfügbare Dateien:", os.listdir(data_path))
+            raise HTTPException(status_code=404, detail=f"Datei nicht gefunden: {file_path}")
 
         df = gpd.read_file(file_path)
-        return json.loads(df.to_json())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Fehler: {e}")
 
-@app.get("/heatmap")
-def get_heatmap():
-    return JSONResponse(content=heatmap_data)
+        # Überprüfe, ob die Spalte 'prediction2' existiert
+        if 'prediction2' not in df.columns:
+            print(f"Verfügbare Spalten: {df.columns.tolist()}")
+            raise HTTPException(status_code=400, detail="Spalte 'prediction2' nicht gefunden")
+
+        # Konvertiere zu GeoJSON und gib zurück
+        return JSONResponse(content=json.loads(df.to_json()))
+    except Exception as e:
+        print(f"Fehler: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Fehler: {str(e)}")
+    
 
 @app.get("/bounds/{landkreis_name}")
 def get_bounds(landkreis_name: str):
