@@ -1,0 +1,4 @@
+name: green-voters-map
+container: your-docker-image
+ports:
+  - "8000:8000"
