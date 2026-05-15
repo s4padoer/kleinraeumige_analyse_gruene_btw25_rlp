@@ -7,3 +7,4 @@ deployment/__pycache__/main.cpython-312.pyc
 *.gpkg
 deployment/app/data/zensus_1km_rlp_with_predictions.geojson
 deployment/app/__pycache__/main.cpython-312.pyc
+deployment/uv.lock

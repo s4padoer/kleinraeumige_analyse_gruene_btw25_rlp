@@ -6,8 +6,6 @@ import geopandas as gpd
 import json
 
 import os
-from pydantic import BaseModel
-from pyrosm import get_data, OSM
 
 
 app = FastAPI()
