@@ -2,8 +2,6 @@ cache/
 .venv
 Zensus2022_grid_final_6219414353666344919
 rheinland-pfalz-251020.osm.pbf
-karte*
 deployment/__pycache__/main.cpython-312.pyc
 *.gpkg
-deployment/app/data/zensus_1km_rlp_with_predictions.geojson
 deployment/app/__pycache__/main.cpython-312.pyc
