@@ -1,6 +1,7 @@
-import os
-import osmnx as ox
 import geopandas as gpd
+import os
+import pandas as pd
+import osmnx as ox
 import json
 from tobler.area_weighted import area_interpolate
 
@@ -27,8 +28,14 @@ zensus_with_landkreis = gpd.sjoin(
     how="left"  # Behalte alle Rasterzellen, auch wenn sie keinem Landkreis zugeordnet sind
 )
 zensus_with_landkreis["centroids"] = zensus_with_landkreis.centroid
+
+# Falls das CRS nicht EPSG:4326 ist, umwandeln
+if zensus_with_landkreis.crs != "EPSG:4326":
+    zensus_with_landkreis = zensus_with_landkreis.to_crs("EPSG:4326")
+    print("Umgewandeltes CRS:", zensus_with_landkreis.crs)  
 zensus_with_landkreis[['prediction2', 'geometry', 'index_right', 'objectid', 'region', 'code',
        'name', 'de_entity', 'fr_entity', 'en_entity', 'fourcolor']].to_file(os.path.join(data_path, "landkreise_with_predictions.geojson"), driver="GeoJSON")
+
 
 for kreis in regions:
     # Filtere Zensus-Daten für den aktuellen Landkreis
@@ -54,7 +61,7 @@ for _, row in zensus_with_landkreis.iterrows():
         "lat": row.centroids.y,
         "lng": row.centroids.x,
         "value": row.prediction2,
-        "landkreis": row.name
+        "landkreis": row["name"]
     })
 
 # Speichern als JSON

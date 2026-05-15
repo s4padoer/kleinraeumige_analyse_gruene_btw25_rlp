@@ -22,6 +22,12 @@ templates = Jinja2Templates(directory=templates_dir)
 
 rlp_regions = gpd.read_file(os.path.join(data_path, "landkreise_with_predictions.geojson"))
 # Liste der verfügbaren Regionen
+print("Originales CRS:", rlp_regions.crs)  # Debugging
+
+# Falls das CRS nicht EPSG:4326 ist, umwandeln
+if rlp_regions.crs != "EPSG:4326":
+    rlp_regions = rlp_regions.to_crs("EPSG:4326")
+    print("Umgewandeltes CRS:", rlp_regions.crs)  
 regions = rlp_regions["name"].unique().tolist() 
 
 # Lade die vorbereiteten Daten
@@ -86,7 +92,7 @@ def get_heatmap():
 @app.get("/bounds/{landkreis_name}")
 def get_bounds(landkreis_name: str):
     try:
-        kreis_data = landkreise_rlp[landkreise_rlp["NAME"] == landkreis_name]
+        kreis_data = rlp_regions[rlp_regions["name"] == landkreis_name]
         if kreis_data.empty:
             raise HTTPException(status_code=404, detail="Landkreis nicht gefunden")
 
