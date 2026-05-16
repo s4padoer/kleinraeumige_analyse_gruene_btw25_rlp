@@ -58,6 +58,20 @@
             border: 1px solid #ccc;
             vertical-align: middle;
         }
+        .info-box {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        font-size: 14px;
+        }
+        .info-box a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .info-box a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -65,6 +79,14 @@
     <select id="landkreis-select">
         <option value="">Landkreis auswählen</option>
     </select>
+    <div class="info-box">
+    <p>
+        Für Infos zur Datenquelle oder Schätzmethodik siehe:
+        <a href="https://github.com/s4padoer/kleinraeumige_analyse_gruene_btw25_rlp" target="_blank">
+            GitHub-Repository
+        </a>
+    </p>
+    </div>
     <div id="legend">
         <h4>Straßenfarben (Wähleranteil GRÜNE)</h4>
         <div><span class="legend-color-box" style="background-color: #000000;"></span> 0-2%</div>
