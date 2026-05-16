@@ -9,3 +9,7 @@ dependencies = [
     "shapely>=2.1.2",
     "uvicorn>=0.46.0",
 ]
+
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
