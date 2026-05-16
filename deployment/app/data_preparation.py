@@ -59,4 +59,4 @@ for kreis in regions:
     joined = gpd.sjoin(roads, zensus_kreis, predicate="intersects")
     
     # Speichere das Ergebnis
-    joined.to_file(os.path.join(data_path, f"strassen_{kreis.lower().replace(" ", "_")}.gpkg"), driver="GPKG")
+    joined.to_file(os.path.join(data_path, f"strassen_{kreis.lower().replace(" ", "_")}.geojson"), driver="GeoJSON")

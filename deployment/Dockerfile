@@ -1,13 +1,10 @@
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgeos-dev \
-    libgdal-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Installiere Systemabhängigkeiten
+RUN apt-get update 
 
-# Kopiere nur die notwendigen Dateien für die Abhängigkeiten
+# Kopiere die Abhängigkeitsdateien und installiere sie
 COPY pyproject.toml uv.lock ./
-
 RUN pip install uv && \
     uv pip compile pyproject.toml -o requirements.txt && \
     pip install -r requirements.txt && \
@@ -17,8 +14,7 @@ RUN pip install uv && \
 # Kopiere den Rest der Anwendung
 COPY app .
 
-# Installiere das Paket im "editable mode" (falls nötig)
-RUN pip install -e .
-
+# Installiere das Paket (nicht im editable mode)
+RUN pip install .
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

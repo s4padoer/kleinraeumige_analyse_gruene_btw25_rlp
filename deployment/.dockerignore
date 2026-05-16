@@ -1,2 +1,6 @@
 cache/
 __pycache__
+app/data/zensus_1km_rlp_with_predictions.geojson
+app/data/kreise-rlp-2026.geojson
+.venv
+app.egg-info

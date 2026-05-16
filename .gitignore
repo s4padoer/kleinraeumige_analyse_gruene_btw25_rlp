@@ -4,3 +4,4 @@ Zensus2022_grid_final_6219414353666344919
 rheinland-pfalz-251020.osm.pbf
 deployment/__pycache__/main.cpython-312.pyc
 deployment/app/__pycache__/main.cpython-312.pyc
+deployment/app.egg-info/*
